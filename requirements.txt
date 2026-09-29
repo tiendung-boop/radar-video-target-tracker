@@ -1,0 +1,12 @@
+opencv-contrib-python
+numpy
+pillow
+pygame
+mss
+pynput
+pywin32
+pytesseract
+easyocr
+edge-tts
+ultralytics
+pyinstaller

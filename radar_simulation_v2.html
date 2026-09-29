@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Radar Simulation v2</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #020608;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: #a6ffca;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 620px 320px;
+        gap: 20px;
+        padding: 30px;
+        width: 980px;
+      }
+
+      .panel {
+        background: rgba(0, 20, 20, 0.9);
+        border: 1px solid #0af0a0;
+        border-radius: 18px;
+        box-shadow: 0 0 40px rgba(0, 255, 170, 0.15);
+        overflow: hidden;
+      }
+
+      .panel-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(0, 255, 170, 0.2);
+        font-size: 18px;
+        font-weight: 700;
+        color: #8cffb8;
+      }
+
+      .radar-wrapper {
+        position: relative;
+        width: 600px;
+        height: 600px;
+        margin: 0 auto;
+        background: radial-gradient(
+          circle at center,
+          rgba(0, 255, 180, 0.06) 0%,
+          rgba(0, 0, 0, 0.75) 65%
+        );
+        border-radius: 50%;
+        border: 3px solid rgba(0, 255, 160, 0.35);
+        overflow: hidden;
+        box-shadow: inset 0 0 35px rgba(0, 255, 170, 0.08);
+      }
+
+      .radar-grid {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .radar-grid circle {
+        fill: none;
+        stroke: rgba(0, 255, 170, 0.18);
+        stroke-width: 1;
+      }
+
+      .radar-grid line {
+        stroke: rgba(0, 255, 170, 0.18);
+        stroke-width: 1;
+      }
+
+      .radar-center {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: #00ffb0;
+        border: 1px solid #ffffff;
+        border-radius: 50%;
+        top: calc(50% - 6px);
+        left: calc(50% - 6px);
+        box-shadow: 0 0 20px rgba(0, 255, 180, 0.8);
+        z-index: 2;
+      }
+
+      /* Lớp chấm vị trí 10s */
+      .dots-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 3;
+      }
+
+      .predict-line {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 4;
+      }
+
+      .target {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        transform-origin: center;
+        pointer-events: none;
+        z-index: 5;
+      }
+
+      .target svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .card {
+        background: rgba(0, 20, 20, 0.95);
+        border: 1px solid rgba(0, 255, 170, 0.2);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 0 30px rgba(0, 255, 170, 0.06);
+      }
+
+      .card h2 {
+        margin-bottom: 12px;
+        font-size: 16px;
+        color: #80ffda;
+      }
+
+      .card p {
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+
+      .value {
+        color: #ffffff;
+        font-weight: 700;
+      }
+
+      .history-item {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 10px;
+        border-bottom: 1px solid rgba(0, 255, 170, 0.1);
+        font-size: 13px;
+      }
+
+      .guide {
+        margin-top: 12px;
+        border-top: 1px solid rgba(0, 255, 170, 0.1);
+        padding-top: 12px;
+        color: #9af7d4;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="panel">
+        <div class="panel-header">Radar mô phỏng</div>
+        <div class="radar-wrapper" id="radar">
+          <!-- Lưới radar -->
+          <svg
+            class="radar-grid"
+            viewBox="0 0 600 600"
+            preserveAspectRatio="none"
+          >
+            <circle cx="300" cy="300" r="50" />
+            <circle cx="300" cy="300" r="100" />
+            <circle cx="300" cy="300" r="150" />
+            <circle cx="300" cy="300" r="200" />
+            <circle cx="300" cy="300" r="250" />
+            <circle cx="300" cy="300" r="300" />
+            <line x1="300" y1="0" x2="300" y2="600" />
+            <line x1="0" y1="300" x2="600" y2="300" />
+            <line x1="112" y1="112" x2="488" y2="488" />
+            <line x1="488" y1="112" x2="112" y2="488" />
+          </svg>
+
+          <div class="radar-center"></div>
+
+          <!-- Lớp chấm vị trí tích lũy (không xoá) -->
+          <svg
+            class="dots-layer"
+            viewBox="0 0 600 600"
+            preserveAspectRatio="none"
+            id="dotsSvg"
+          ></svg>
+
+          <!-- Lớp dự đoán quỹ đạo -->
+          <svg
+            class="predict-line"
+            viewBox="0 0 600 600"
+            preserveAspectRatio="none"
+            id="predictSvg"
+          ></svg>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="card">
+          <h2>Thông số Radar</h2>
+          <p><strong>1 vòng tròn</strong> = <span class="value">50 km</span></p>
+          <p>
+            <strong>6 vòng tròn</strong> hiển thị tới
+            <span class="value">300 km</span>
+          </p>
+          <p><strong>Góc 0°</strong> = Bắc, <strong>90°</strong> = Đông</p>
+          <p>
+            <strong>Số mục tiêu:</strong> <span class="value">5 máy bay</span>
+          </p>
+          <div class="guide">
+            Đầu và thân máy bay thẳng theo hướng bay. Chấm 1px được đánh dấu mỗi
+            <strong>10 giây</strong> tại vị trí tức thời của từng máy bay. Đường
+            đứt nét là dự đoán quỹ đạo 30 giây tới.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Mục tiêu đang theo dõi</h2>
+          <div
+            id="targetsList"
+            style="max-height: 280px; overflow-y: auto"
+          ></div>
+        </div>
+
+      </div>
+    </div>
+
+    <script>
+      const radar = document.getElementById("radar");
+      const predictSvg = document.getElementById("predictSvg");
+      const dotsSvg = document.getElementById("dotsSvg");
+      const targetsList = document.getElementById("targetsList");
+
+      const RADAR_SIZE = 600;
+      const CENTER = RADAR_SIZE / 2;
+      const MAX_RANGE_KM = 300;
+      const KM_TO_PX = CENTER / MAX_RANGE_KM;
+      const DOT_INTERVAL = 10; // giây
+      const G_ACCEL = 0.00981; // g = 9.81 m/s² đổi sang km/s²
+
+      const targets = [
+        {
+          // AC01 — Dân sự: holding racetrack ~SW radar center
+          id: 0, name: "AC01",
+          x: -40, y: 60,
+          vx: -0.07, vy: 0.07,            // ~356 km/h ≈ 350 km/h dân sự, hướng về P2
+          color: "#00ffb0", colorLight: "#8cffd2",
+          history: [], el: null,
+          loadFactor: 1.1,                 // ~25° bank standard rate turn → R ≈ 2.2 km tại 356 km/h
+          behavior: { type: "patrol", p1: {x:-40,y:60}, p2: {x:-100,y:120}, phase: 0, cooldown: 0 },
+        },
+        {
+          // AC02 — Tiêm kích: CAP racetrack dọc cạnh Bắc
+          id: 1, name: "AC02",
+          x: -130, y: -160,
+          vx: 0.33, vy: 0,                 // ~1188 km/h ≈ 1200 km/h tiêm kích sustained, hướng Đông về P2
+          color: "#00ffff", colorLight: "#80ffff",
+          history: [], el: null,
+          loadFactor: 1.5,                 // patrol bank ~48° → R ≈ 10 km tại 1188 km/h, cung rõ trên radar
+          behavior: { type: "patrol", p1: {x:-130,y:-160}, p2: {x:130,y:-160}, phase: 0, cooldown: 0 },
+        },
+        {
+          // AC03 — Trinh sát: quỹ đạo tròn rộng theo chiều kim đồng hồ
+          id: 2, name: "AC03",
+          x: 170, y: 80,                   // điểm đầu = cx+R, cy
+          vx: 0, vy: 0.19,                 // ~684 km/h ≈ 700 km/h trinh sát (U-2 style), tiếp tuyến → hướng Nam
+          color: "#ffff00", colorLight: "#ffff80",
+          history: [], el: null,
+          loadFactor: 1.1,                 // gần như bay bằng (~6° bank)
+          behavior: { type: "orbit", cx: 80, cy: 80, radius: 90, orbitOmega: 0.19 / 90 },
+        },
+        {
+          // AC04 — Tiêm kích: CAP racetrack dọc cạnh Tây
+          // loadFactor 1.5G (φ≈48°): patrol bank, không phải combat turn.
+          // Cho R = V²/(g·tan φ) ≈ 10 km → cung U-turn ~20 km đường kính, rõ trên radar 300 km.
+          // 4.5G chỉ dùng trong không chiến; CAP patrol dùng bank nhỏ để tiết kiệm nhiên liệu.
+          id: 3, name: "AC04",
+          x: -180, y: -80,
+          vx: 0, vy: 0.33,                 // ~1188 km/h, hướng Nam về P2
+          color: "#ff00ff", colorLight: "#ff80ff",
+          history: [], el: null,
+          loadFactor: 1.5,                 // patrol bank ~48° → R ≈ 10 km, U-turn rõ trên radar
+          behavior: { type: "patrol", p1: {x:-180,y:-80}, p2: {x:-180,y:80}, phase: 0, cooldown: 0 },
+        },
+        {
+          // AC05 — Vận tải: tuyến waypoint tam giác
+          id: 4, name: "AC05",
+          x: 170, y: -90,
+          vx: -0.14, vy: 0.17,             // ~0.22 km/s = 792 km/h ≈ 800 km/h vận tải, hướng về WP tiếp theo
+          color: "#ff6600", colorLight: "#ffaa66",
+          history: [], el: null,
+          loadFactor: 1.3,                 // vận tải quân sự — bank nhẹ → R ≈ 6 km tại 792 km/h
+          behavior: {
+            type: "route",
+            waypoints: [{x:170,y:-90}, {x:-80,y:200}, {x:-150,y:-120}],
+            wpIdx: 0, cooldown: 0,
+          },
+        },
+      ];
+
+      let elapsedSinceHistMark = 0;
+      let elapsedSinceDot = 0;
+      let totalTime = 0;
+
+      // Bộ nhớ đệm dữ liệu quỹ đạo — dùng cho bộ dự đoán tương lai
+      // Mỗi entry: { t, id, name, x, y, vx, vy, speed, heading }
+      const trajectoryLog = {}; // keyed by target id
+      let lastLogTime = -1;
+
+      /**
+       * Tạo element máy bay nhìn từ trên xuống.
+       * Mũi (nose) chỉ LÊN TRÊN trong tọa độ SVG gốc (hướng y giảm).
+       * CSS rotate() sẽ xoay mũi về đúng hướng bay theo công thức:
+       *   angle = atan2(vy, vx) * 180/π + 90
+       * Kiểm tra nhanh:
+       *   Bắc (vx=0, vy<0) → -90° + 90° = 0°   → mũi lên = Bắc ✓
+       *   Đông (vx>0, vy=0) →  0° + 90° = 90°   → mũi phải = Đông ✓
+       *   Nam  (vx=0, vy>0) → 90° + 90° = 180°  → mũi xuống = Nam ✓
+       *   Tây  (vx<0, vy=0) → 180°+ 90° = 270°  → mũi trái = Tây ✓
+       */
+      // Hình dạng máy bay lấy nguyên từ radar_simulation.html, xoay 90° theo chiều kim đồng hồ
+      // quanh tâm (50,50) theo quy tắc (x,y)→(y, 100-x), để mũi chỉ lên trên (y=0).
+      // Công thức xoay CSS angle = atan2(vy,vx)*180/π + 90 sẽ đưa mũi đúng hướng bay.
+      function createPlaneElement(color, colorLight) {
+        const div = document.createElement("div");
+        div.className = "target";
+        div.innerHTML = `
+          <svg viewBox="0 0 100 100">
+            <g fill="${color}" stroke="${colorLight}" stroke-width="1.5">
+              <!-- Thân dọc (từ ellipse ngang rx=30,ry=5 → dọc rx=5,ry=30) -->
+              <ellipse cx="50" cy="50" rx="5" ry="30" />
+              <!-- Fuselage dọc với mũi nhọn bo tròn ở trên -->
+              <path d="M 45 80 L 45 20 A 5 5 0 0 1 55 20 L 55 80 Z" />
+              <!-- Cánh trái quét ngược (swept-back) -->
+              <path d="M 50 55 L 5 70 L 50 35 Z" />
+              <!-- Cánh phải quét ngược (swept-back) -->
+              <path d="M 50 55 L 95 70 L 50 35 Z" />
+              <!-- Đuôi ngang (horizontal stabilizer) -->
+              <path d="M 50 70 L 28 85 L 28 90 L 50 80 L 72 90 L 72 85 Z" />
+            </g>
+          </svg>
+        `;
+        return div;
+      }
+
+      function toPx(km) {
+        return CENTER + km * KM_TO_PX;
+      }
+
+      function fmt(v, d = 1) {
+        return Number(v).toFixed(d);
+      }
+
+      function distKm(x, y) {
+        return Math.sqrt(x * x + y * y);
+      }
+
+      function bearing(x, y) {
+        let deg = (Math.atan2(x, -y) * 180) / Math.PI;
+        return Math.round((deg + 360) % 360);
+      }
+
+      // Quay dần velocity của t về hướng (tx,ty) với tốc độ góc tối đa theo loadFactor
+      function steerToward(t, tx, ty, dt) {
+        const speed = Math.sqrt(t.vx * t.vx + t.vy * t.vy);
+        if (speed < 0.001) return;
+        const desired = Math.atan2(ty - t.y, tx - t.x);
+        const cur = Math.atan2(t.vy, t.vx);
+        let diff = desired - cur;
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        const tanBank = Math.sqrt(t.loadFactor * t.loadFactor - 1);
+        const omega = (G_ACCEL * tanBank) / speed; // rad/s, tỉ lệ nghịch tốc độ
+        const dA = Math.min(Math.abs(diff), omega * dt) * Math.sign(diff);
+        const a = cur + dA;
+        t.vx = Math.cos(a) * speed;
+        t.vy = Math.sin(a) * speed;
+      }
+
+      // Áp dụng hành vi bay có mục đích — dùng cả trong simulate lẫn dự đoán
+      function applyBehavior(t, dt) {
+        const b = t.behavior;
+
+        if (b.type === "orbit") {
+          // Trinh sát: quỹ đạo tròn — nhắm điểm tiếp tuyến 25 giây phía trước
+          const ca = Math.atan2(t.y - b.cy, t.x - b.cx);
+          const la = ca + b.orbitOmega * 25;
+          steerToward(t, b.cx + Math.cos(la) * b.radius, b.cy + Math.sin(la) * b.radius, dt);
+
+        } else if (b.type === "patrol") {
+          // CAP / Holding racetrack: đổi đầu khi đến gần waypoint
+          if (b.cooldown > 0) b.cooldown -= dt;
+          const wp = b.phase === 0 ? b.p2 : b.p1;
+          const dx = wp.x - t.x, dy = wp.y - t.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const speed = Math.sqrt(t.vx * t.vx + t.vy * t.vy);
+          const tanBank = Math.sqrt(t.loadFactor * t.loadFactor - 1);
+          // Bán kính rẽ vật lý → dùng làm ngưỡng bắt đầu vòng U-turn
+          const capR = Math.max((speed * speed) / (G_ACCEL * tanBank) * 2, 10);
+          if (dist < capR && b.cooldown <= 0) {
+            b.phase = 1 - b.phase;
+            b.cooldown = capR / speed; // tránh oscillation ngay sau khi đổi đầu
+          }
+          const tgt = b.phase === 0 ? b.p2 : b.p1;
+          steerToward(t, tgt.x, tgt.y, dt);
+
+        } else if (b.type === "route") {
+          // Vận tải: bay qua danh sách waypoint theo thứ tự
+          if (b.cooldown > 0) b.cooldown -= dt;
+          const wp = b.waypoints[b.wpIdx];
+          const dx = wp.x - t.x, dy = wp.y - t.y;
+          if (Math.sqrt(dx * dx + dy * dy) < 20 && b.cooldown <= 0) {
+            b.wpIdx = (b.wpIdx + 1) % b.waypoints.length;
+            b.cooldown = 15;
+          }
+          steerToward(t, b.waypoints[b.wpIdx].x, b.waypoints[b.wpIdx].y, dt);
+        }
+
+        // Lưới an toàn: kéo về tâm nếu ra quá xa
+        if (distKm(t.x, t.y) > 270) steerToward(t, 0, 0, dt);
+      }
+
+      function placeTarget(t) {
+        const px = toPx(t.x);
+        const py = toPx(t.y);
+        t.el.style.left = `${px - 12}px`;
+        t.el.style.top = `${py - 12}px`;
+        const angle = (Math.atan2(t.vy, t.vx) * 180) / Math.PI + 90;
+        t.el.style.transform = `rotate(${angle}deg)`;
+      }
+
+      // Đánh dấu chấm 1px tại vị trí tức thời mỗi máy bay
+      function addPositionDots() {
+        targets.forEach((t) => {
+          const dot = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle",
+          );
+          dot.setAttribute("cx", toPx(t.x));
+          dot.setAttribute("cy", toPx(t.y));
+          dot.setAttribute("r", "1");
+          dot.setAttribute("fill", t.color);
+          dotsSvg.appendChild(dot);
+        });
+      }
+
+      function drawPredictions() {
+        let html = "";
+        targets.forEach((t) => {
+          // Mô phỏng 30 giây tới theo đúng behavior (vẽ đường cong, không phải thẳng)
+          const clone = {
+            x: t.x, y: t.y, vx: t.vx, vy: t.vy,
+            loadFactor: t.loadFactor,
+            behavior: JSON.parse(JSON.stringify(t.behavior)),
+          };
+          const pts = [`${toPx(t.x)},${toPx(t.y)}`];
+          for (let i = 0; i < 6; i++) {
+            applyBehavior(clone, 5);
+            clone.x += clone.vx * 5;
+            clone.y += clone.vy * 5;
+            pts.push(`${toPx(clone.x)},${toPx(clone.y)}`);
+          }
+          html += `<polyline fill="none" stroke="${t.color}" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.65" points="${pts.join(" ")}" />`;
+        });
+        predictSvg.innerHTML = html;
+      }
+
+      function renderTargetsList() {
+        targetsList.innerHTML = "";
+        targets.forEach((t) => {
+          const dist = distKm(t.x, t.y);
+          const bear = bearing(t.x, t.y);
+          const speed = Math.sqrt(t.vx * t.vx + t.vy * t.vy) * 3600;
+          const item = document.createElement("div");
+          item.className = "history-item";
+          item.style.borderLeft = `3px solid ${t.color}`;
+          item.style.background = "rgba(0,255,170,0.04)";
+          item.innerHTML = `
+            <div><strong style="color:${t.color}">${t.name}</strong></div>
+            <div style="color:#a6ffca">${fmt(dist)} km</div>
+            <div style="color:#a6ffca">Hướng: ${bear}°</div>
+            <div style="color:#a6ffca">V: ${fmt(speed, 0)} km/h</div>
+          `;
+          targetsList.appendChild(item);
+        });
+      }
+
+      function logTrajectory() {
+        const t = Math.floor(totalTime);
+        if (t === lastLogTime) return; // chỉ log 1 lần mỗi giây
+        lastLogTime = t;
+        targets.forEach((ac) => {
+          if (!trajectoryLog[ac.id]) trajectoryLog[ac.id] = [];
+          const speed = Math.sqrt(ac.vx * ac.vx + ac.vy * ac.vy);
+          trajectoryLog[ac.id].push({
+            t,
+            x: ac.x,
+            y: ac.y,
+            vx: ac.vx,
+            vy: ac.vy,
+            speed,
+            heading: (Math.atan2(ac.vx, -ac.vy) * 180) / Math.PI,
+          });
+        });
+      }
+
+      function step(dt) {
+        totalTime += dt;
+        elapsedSinceHistMark += dt;
+        elapsedSinceDot += dt;
+
+        // Hành vi bay có mục đích cho từng máy bay
+        targets.forEach((t) => applyBehavior(t, dt));
+
+        // Di chuyển
+        targets.forEach((t) => {
+          t.x += t.vx * dt;
+          t.y += t.vy * dt;
+        });
+
+        // Ghi lịch sử mỗi giây
+        if (elapsedSinceHistMark >= 1) {
+          elapsedSinceHistMark -= 1;
+          targets.forEach((t) => {
+            t.history.push({ time: Math.floor(totalTime), x: t.x, y: t.y });
+            if (t.history.length > 30) t.history.shift();
+          });
+        }
+
+        // Đánh dấu chấm mỗi 10 giây
+        if (elapsedSinceDot >= DOT_INTERVAL) {
+          elapsedSinceDot -= DOT_INTERVAL;
+          addPositionDots();
+        }
+
+        targets.forEach((t) => placeTarget(t));
+        drawPredictions();
+        renderTargetsList();
+
+        // Lưu dữ liệu quỹ đạo liên tục mỗi giây (dùng cho bộ dự đoán tương lai)
+        logTrajectory();
+      }
+
+      function animate(ts) {
+        if (!animate.last) animate.last = ts;
+        const dt = (ts - animate.last) / 1000;
+        animate.last = ts;
+        step(dt);
+        requestAnimationFrame(animate);
+      }
+
+      window.addEventListener("load", () => {
+        targets.forEach((t) => {
+          t.el = createPlaneElement(t.color, t.colorLight);
+          radar.appendChild(t.el);
+          placeTarget(t);
+        });
+        drawPredictions();
+        renderTargetsList();
+        requestAnimationFrame(animate);
+      });
+    </script>
+  </body>
+</html>

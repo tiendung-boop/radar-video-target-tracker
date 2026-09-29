@@ -1,0 +1,56 @@
+HƯỚNG DẪN SỬ DỤNG — RadarVRS
+==============================
+(File này chỉ liệt kê thao tác — không giải thích kỹ thuật bên trong)
+
+1) CHUỘT
+--------
+- Chuột TRÁI (không giữ Shift): bấm vào 1 mục tiêu để đọc ngay thông tin
+  (ID, phương vị, cự ly) và chọn mục tiêu đó (dùng để xóa bằng phím Delete).
+- Shift + Chuột TRÁI: bấm/xác nhận 1 điểm màu bất kỳ thành mục tiêu (track)
+  mới — mở ngay bảng nhập ID + chu kỳ phát ở góc trên-trái.
+- Chuột PHẢI: mở bảng nhập ID + chu kỳ phát cho mục tiêu dưới con trỏ
+  (dùng được với cả mục tiêu đã có tên, để sửa lại).
+- Giữ CHUỘT GIỮA và kéo: chọn lại vùng mốc để tính tỉ lệ km/px (dùng khi
+  video vừa đổi tầm quan sát "Km" mà hệ thống báo "không chắc chắn").
+
+2) PHÍM
+-------
+- Delete: xóa hẳn mục tiêu đang chọn (bấm chuột trái/Shift+trái gần nhất).
+- Shift + Delete: xóa mục tiêu VÀ loại trừ vĩnh viễn vị trí đó khỏi "Phát
+  tự động" (dùng khi "Phát tự động" cứ bắt nhầm 1 chỗ cố định trên bản đồ,
+  vd đường viền/lưới/bờ biển).
+- Space: tạm dừng / tiếp tục phát lại (chỉ áp dụng khi phát lại file video).
+- [ và ]: giảm / tăng tốc độ phát lại (chỉ áp dụng khi phát lại file video).
+- - và =: chỉnh tay tỉ lệ km/px (dùng khi mốc tự động báo "không chắc
+  chắn" kéo dài sau khi video zoom).
+- Q hoặc Esc: thoát chương trình.
+- Trong bảng nhập ID (góc trên-trái): gõ số để ghi đè ô ID (đang bôi đen
+  sẵn), Tab để chuyển sang ô "Chu kỳ (giây)", ENTER để xác nhận + bắt đầu
+  phát lặp lại, ESC để bỏ qua (không xóa mục tiêu).
+
+3) 2 NÚT BẤM Ở GÓC TRÊN-PHẢI MÀN HÌNH
+--------------------------------------
+- Nút "Phát" (nút bên phải) — bấm liên tiếp để chuyển trạng thái:
+    Phát (tắt)  ->  Phát chậm  ->  Phát nhanh  ->  Phát (tắt)  -> ...
+  Âm thanh đang phát sẽ DỪNG NGAY LẬP TỨC mỗi khi chuyển trạng thái.
+  Khi đang Phát (chậm hoặc nhanh), hệ thống LUÔN tiếp tục tự động dò tìm
+  mục tiêu MỚI (dù trước đó đã có sẵn mục tiêu chọn tay hay chưa) — mục
+  tiêu chọn tay đang có KHÔNG bao giờ bị xóa bởi nút Phát.
+
+- Nút "Ưu tiên" (nút bên trái, cạnh nút Phát) — bật/tắt độc lập với nút
+  Phát, có thể bật trước hoặc trong lúc đang Phát:
+    * Khi BẬT: dù đang Phát chậm hay Phát nhanh, hệ thống CHỈ đọc các
+      mục tiêu đã được chọn bằng tay (Shift + Chuột trái) — bỏ qua hết
+      các mục tiêu do "Phát tự động" tự tìm ra. Lúc bấm BẬT, mọi mục
+      tiêu do "Phát tự động" tự tìm ra sẽ bị XÓA NGAY (âm thanh cũng
+      dừng ngay lập tức) — chỉ còn lại các mục tiêu đã chọn tay, và
+      các mục tiêu đó được đọc LIÊN TỤC (không còn đợi theo chu kỳ riêng).
+    * Khi TẮT: KHÔNG xóa gì cả, giữ nguyên mọi mục tiêu đang có — chỉ
+      quay lại đọc theo chế độ bình thường (vẫn tiếp tục dò tìm mục tiêu
+      mới khi đang Phát).
+
+4) CÔNG CỤ ĐI KÈM
+------------------
+- RadarIDColorConfig.exe (nằm cạnh RadarVRS.exe): mở bảng cấu hình
+  "chữ số đầu ID -> màu hiển thị" và "khoảng ID -> loại mục tiêu". Sau
+  khi Lưu, phải KHỞI ĐỘNG LẠI RadarVRS.exe để áp dụng thay đổi.

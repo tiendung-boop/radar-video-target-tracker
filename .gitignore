@@ -1,0 +1,31 @@
+CLAUDE.md
+.claude/
+.vscode/
+.venv/
+__pycache__/
+*.pyc
+
+# Build output / large binaries / models
+build/
+dist/
+easyocr_models/
+tesseract_bin/
+runs/
+*.pt
+
+# Videos and generated data
+*.mp4
+*.avi
+ket_qua_test.txt
+live_tracks.json
+live_tracks.html
+tracks.json
+calibration.json
+auto_exclude.json
+id_color_rules.json
+
+# Documents
+*.doc
+*.docx
+*.pptx
+*.pdf

@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Radar Simulation</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #020608;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: #a6ffca;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 620px 320px;
+        gap: 20px;
+        padding: 30px;
+        width: 980px;
+      }
+
+      .panel {
+        background: rgba(0, 20, 20, 0.9);
+        border: 1px solid #0af0a0;
+        border-radius: 18px;
+        box-shadow: 0 0 40px rgba(0, 255, 170, 0.15);
+        overflow: hidden;
+      }
+
+      .panel-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(0, 255, 170, 0.2);
+        font-size: 18px;
+        font-weight: 700;
+        color: #8cffb8;
+      }
+
+      .radar-wrapper {
+        position: relative;
+        width: 600px;
+        height: 600px;
+        margin: 0 auto;
+        background: radial-gradient(
+          circle at center,
+          rgba(0, 255, 180, 0.06) 0%,
+          rgba(0, 0, 0, 0.75) 65%
+        );
+        border-radius: 50%;
+        border: 3px solid rgba(0, 255, 160, 0.35);
+        overflow: hidden;
+        box-shadow: inset 0 0 35px rgba(0, 255, 170, 0.08);
+      }
+
+      .radar-grid {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .radar-grid circle {
+        fill: none;
+        stroke: rgba(0, 255, 170, 0.18);
+        stroke-width: 1;
+      }
+
+      .radar-grid line {
+        stroke: rgba(0, 255, 170, 0.18);
+        stroke-width: 1;
+      }
+
+      .radar-center {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: #00ffb0;
+        border: 1px solid #ffffff;
+        border-radius: 50%;
+        top: calc(50% - 6px);
+        left: calc(50% - 6px);
+        box-shadow: 0 0 20px rgba(0, 255, 180, 0.8);
+        z-index: 2;
+      }
+
+      .plane {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        transform-origin: center;
+        pointer-events: none;
+        z-index: 5;
+      }
+
+      .plane svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .target {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        transform-origin: center;
+        pointer-events: none;
+        z-index: 5;
+      }
+
+      .target svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .trail-point {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(0, 255, 180, 0.8);
+        box-shadow: 0 0 12px rgba(0, 255, 170, 0.6);
+        pointer-events: none;
+        z-index: 3;
+      }
+
+      .predict-line {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 4;
+      }
+
+      .status-box {
+        position: absolute;
+        left: 20px;
+        bottom: 24px;
+        background: rgba(1, 20, 20, 0.88);
+        border: 1px solid rgba(0, 255, 170, 0.22);
+        border-radius: 12px;
+        padding: 12px 14px;
+        width: calc(100% - 40px);
+        color: #d7fff0;
+        font-size: 13px;
+        line-height: 1.6;
+        z-index: 6;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .card {
+        background: rgba(0, 20, 20, 0.95);
+        border: 1px solid rgba(0, 255, 170, 0.2);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 0 30px rgba(0, 255, 170, 0.06);
+      }
+
+      .card h2 {
+        margin-bottom: 12px;
+        font-size: 16px;
+        color: #80ffda;
+      }
+
+      .card p,
+      .card li {
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+
+      .card ul {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+      }
+
+      .value {
+        color: #ffffff;
+        font-weight: 700;
+      }
+
+      .history-list {
+        max-height: 320px;
+        overflow-y: auto;
+        margin-top: 10px;
+      }
+
+      .history-item {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 10px;
+        border-bottom: 1px solid rgba(0, 255, 170, 0.1);
+        font-size: 13px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        color: #84ffd6;
+      }
+
+      .tag span {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #0ff;
+      }
+
+      .guide {
+        margin-top: 12px;
+        border-top: 1px solid rgba(0, 255, 170, 0.1);
+        padding-top: 12px;
+        color: #9af7d4;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="panel">
+        <div class="panel-header">
+          Radar mô phỏng với điểm dấu, lịch sử và dự đoán đường bay
+        </div>
+        <div class="radar-wrapper" id="radar">
+          <svg
+            class="radar-grid"
+            viewBox="0 0 600 600"
+            preserveAspectRatio="none"
+          >
+            <circle cx="300" cy="300" r="50" />
+            <circle cx="300" cy="300" r="100" />
+            <circle cx="300" cy="300" r="150" />
+            <circle cx="300" cy="300" r="200" />
+            <circle cx="300" cy="300" r="250" />
+            <circle cx="300" cy="300" r="300" />
+            <line x1="300" y1="0" x2="300" y2="600" />
+            <line x1="0" y1="300" x2="600" y2="300" />
+            <line x1="112" y1="112" x2="488" y2="488" />
+            <line x1="488" y1="112" x2="112" y2="488" />
+          </svg>
+          <div class="radar-center"></div>
+          <svg
+            class="predict-line"
+            viewBox="0 0 600 600"
+            preserveAspectRatio="none"
+            id="predictSvg"
+          ></svg>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="card">
+          <h2>Thông số Radar</h2>
+          <p><strong>1 vòng tròn</strong> = <span class="value">50 km</span></p>
+          <p>
+            <strong>6 vòng tròn</strong> hiển thị tới
+            <span class="value">300 km</span>
+          </p>
+          <p><strong>Góc 0°</strong> = Bắc, <strong>90°</strong> = Đông</p>
+          <p>
+            <strong>Số mục tiêu:</strong> <span class="value">5 máy bay</span>
+          </p>
+          <div class="guide">
+            Mỗi máy bay có màu khác nhau. Đường chấm thể hiện dự đoán quỹ đạo 30
+            giây tới. Lịch sử được ghi lại mỗi giây.
+          </div>
+        </div>
+        <div class="card">
+          <h2>Mục tiêu được theo dõi</h2>
+          <div
+            id="targetsList"
+            style="max-height: 320px; overflow-y: auto"
+          ></div>
+        </div>
+        <div class="card">
+          <h2>Lịch sử mỗi giây</h2>
+          <div class="history-list" id="historyList"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const radar = document.getElementById("radar");
+      const statusBox = document.getElementById("statusBox");
+      const historyList = document.getElementById("historyList");
+      const predictSvg = document.getElementById("predictSvg");
+      const targetsList = document.getElementById("targetsList");
+
+      const RADAR_SIZE = 600;
+      const CENTER = RADAR_SIZE / 2;
+      const MAX_RANGE_KM = 300;
+      const RING_KM = 50;
+      const KM_TO_PX = CENTER / MAX_RANGE_KM; // 1 pixel = 1 km on radar display
+
+      const targets = [
+        {
+          id: 0,
+          name: "AC01",
+          x: -120,
+          y: 110,
+          vx: 0.06,
+          vy: -0.03,
+          color: "#00ffb0",
+          colorLight: "#8cffd2",
+          history: [],
+          el: null,
+        },
+        {
+          id: 1,
+          name: "AC02",
+          x: 80,
+          y: -140,
+          vx: -0.05,
+          vy: 0.06,
+          color: "#00ffff",
+          colorLight: "#80ffff",
+          history: [],
+          el: null,
+        },
+        {
+          id: 2,
+          name: "AC03",
+          x: 150,
+          y: 60,
+          vx: -0.04,
+          vy: -0.05,
+          color: "#ffff00",
+          colorLight: "#ffff80",
+          history: [],
+          el: null,
+        },
+        {
+          id: 3,
+          name: "AC04",
+          x: -180,
+          y: -80,
+          vx: 0.07,
+          vy: 0.03,
+          color: "#ff00ff",
+          colorLight: "#ff80ff",
+          history: [],
+          el: null,
+        },
+        {
+          id: 4,
+          name: "AC05",
+          x: 60,
+          y: 160,
+          vx: -0.06,
+          vy: -0.04,
+          color: "#ff6600",
+          colorLight: "#ffaa66",
+          history: [],
+          el: null,
+        },
+      ];
+
+      let elapsedSinceLastMark = 0;
+      let totalTime = 0;
+
+      function createPlaneElement(color, colorLight) {
+        const div = document.createElement("div");
+        div.className = "target";
+        div.innerHTML = `
+                <svg viewBox="0 0 100 100">
+                    <g fill="${color}" stroke="${colorLight}" stroke-width="1.5">
+                        <ellipse cx="50" cy="50" rx="30" ry="5" />
+                        <path d="M 20 45 L 80 45 A 5 5 0 0 1 80 55 L 20 55 Z " />
+                        <path d="M 45 50 L 30 5 L 65 50 Z" />
+                        <path d="M 45 50 L 30 95 L 65 50 Z" />
+                        <path d="M 30 50 L 15 28 L 10 28 L 20 50 L 10 72 L 15 72 Z" />
+                    </g>
+                </svg>
+            `;
+        return div;
+      }
+
+      function toPx(valueKm) {
+        return CENTER + valueKm * KM_TO_PX;
+      }
+
+      function formatNumber(value, digits = 1) {
+        return Number(value).toFixed(digits);
+      }
+
+      function getDistanceKm(x, y) {
+        return Math.sqrt(x * x + y * y);
+      }
+
+      function getBearing(x, y) {
+        const radians = Math.atan2(x, -y);
+        let degrees = (radians * 180) / Math.PI;
+        degrees = (degrees + 360) % 360;
+        return Math.round(degrees);
+      }
+
+      function placeTarget(target) {
+        const px = toPx(target.x);
+        const py = toPx(target.y);
+        target.el.style.left = `${px - 11}px`;
+        target.el.style.top = `${py - 11}px`;
+        const angle = (Math.atan2(target.vy, target.vx) * 180) / Math.PI + 90;
+        target.el.style.transform = `rotate(${angle}deg)`;
+      }
+
+      function drawAllHistory() {
+        // Lịch sử không được hiển thị dưới dạng điểm chấm
+      }
+
+      function drawAllPredictions() {
+        let polylines = "";
+        targets.forEach((target) => {
+          const futurePoints = [];
+          const steps = 6;
+          for (let i = 1; i <= steps; i++) {
+            futurePoints.push({
+              x: target.x + target.vx * i * 5,
+              y: target.y + target.vy * i * 5,
+            });
+          }
+          polylines += `<polyline fill="none" stroke="${target.color}" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.7" points="${futurePoints.map((p) => `${toPx(p.x)},${toPx(p.y)}`).join(" ")}" />`;
+        });
+        predictSvg.innerHTML = polylines;
+      }
+
+      function renderTargetsList() {
+        targetsList.innerHTML = "";
+        targets.forEach((target) => {
+          const dist = getDistanceKm(target.x, target.y);
+          const bearing = getBearing(target.x, target.y);
+          const speedKmh =
+            Math.sqrt(target.vx * target.vx + target.vy * target.vy) * 3600;
+
+          const item = document.createElement("div");
+          item.className = "history-item";
+          item.style.borderLeft = `3px solid ${target.color}`;
+          item.style.background = `rgba(0, 255, 170, 0.05)`;
+          item.innerHTML = `
+                    <div><strong style="color:${target.color}">${target.name}</strong></div>
+                    <div style="color:#a6ffca">${formatNumber(dist, 1)} km</div>
+                    <div style="color:#a6ffca">Vị: ${bearing}°</div>
+                    <div style="color:#a6ffca">V: ${formatNumber(speedKmh, 0)} km/h</div>
+                `;
+          targetsList.appendChild(item);
+        });
+      }
+
+      function renderStatus() {
+        // Trạng thái được hiển thị trên sidebar
+      }
+
+      function step(dt) {
+        totalTime += dt;
+        elapsedSinceLastMark += dt;
+
+        targets.forEach((target) => {
+          target.x += target.vx * dt;
+          target.y += target.vy * dt;
+
+          const distance = getDistanceKm(target.x, target.y);
+          if (distance > MAX_RANGE_KM) {
+            target.vx *= -0.95;
+            target.vy *= -0.95;
+          }
+        });
+
+        if (elapsedSinceLastMark >= 1) {
+          elapsedSinceLastMark -= 1;
+          targets.forEach((target) => {
+            const distance = getDistanceKm(target.x, target.y);
+            const speedKmh =
+              Math.sqrt(target.vx * target.vx + target.vy * target.vy) * 3600;
+            target.history.push({
+              time: Math.floor(totalTime),
+              x: target.x,
+              y: target.y,
+              dist: distance,
+              speed: speedKmh,
+            });
+            if (target.history.length > 30) {
+              target.history.shift();
+            }
+          });
+        }
+
+        renderStatus();
+        targets.forEach((target) => placeTarget(target));
+        drawAllPredictions();
+        renderTargetsList();
+      }
+
+      function animate(timestamp) {
+        if (!animate.last) animate.last = timestamp;
+        const deltaMs = (timestamp - animate.last) / 1000;
+        animate.last = timestamp;
+        step(deltaMs);
+        requestAnimationFrame(animate);
+      }
+
+      window.addEventListener("load", () => {
+        targets.forEach((target) => {
+          target.el = createPlaneElement(target.color, target.colorLight);
+          radar.appendChild(target.el);
+        });
+        renderStatus();
+        targets.forEach((target) => placeTarget(target));
+        drawAllPredictions();
+        renderTargetsList();
+        requestAnimationFrame(animate);
+      });
+    </script>
+  </body>
+</html>
